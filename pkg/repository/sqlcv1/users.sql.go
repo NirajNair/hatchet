@@ -12,6 +12,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cleanupUserSessions = `-- name: CleanupUserSessions :many
+DELETE FROM "UserSession"
+WHERE
+   "expiresAt" < NOW()
+   OR (
+       "userId" IS NULL
+       AND "createdAt" < NOW() - INTERVAL '24 hours'
+   )
+RETURNING "id"
+`
+
+func (q *Queries) CleanupUserSessions(ctx context.Context, db DBTX) ([]uuid.UUID, error) {
+	rows, err := db.Query(ctx, cleanupUserSessions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO "User" (
     "id",

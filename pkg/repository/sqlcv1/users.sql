@@ -154,3 +154,13 @@ DELETE FROM
 WHERE
     "id" = @id::uuid
 RETURNING *;
+
+-- name: CleanupUserSessions :many
+DELETE FROM "UserSession"
+WHERE
+   "expiresAt" < NOW()
+   OR (
+       "userId" IS NULL
+       AND "createdAt" < NOW() - INTERVAL '24 hours'
+   )
+RETURNING "id";

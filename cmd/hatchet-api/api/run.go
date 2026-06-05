@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hatchet-dev/hatchet/api/v1/server/cron"
 	"github.com/hatchet-dev/hatchet/api/v1/server/run"
 	"github.com/hatchet-dev/hatchet/pkg/config/loader"
 	"github.com/hatchet-dev/hatchet/pkg/telemetry"
@@ -52,6 +53,16 @@ func Start(
 
 	var teardown []func() error
 
+	cronScheduler, err := cron.NewScheduler(server)
+	if err != nil {
+		return fmt.Errorf("error creating cron scheduler: %w", err)
+	}
+
+	cronSchedulerCleanup, err := cronScheduler.Start()
+	if err != nil {
+		return fmt.Errorf("could not start cron scheduler: %w", err)
+	}
+
 	runner := run.NewAPIServer(server)
 
 	apiCleanup, err := runner.Run()
@@ -60,6 +71,7 @@ func Start(
 	}
 
 	teardown = append(teardown, apiCleanup)
+	teardown = append(teardown, cronSchedulerCleanup)
 	teardown = append(teardown, configCleanup)
 
 	server.Logger.Debug().Msgf("api started successfully")

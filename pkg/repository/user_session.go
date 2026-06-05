@@ -37,6 +37,8 @@ type UserSessionRepository interface {
 	Update(ctx context.Context, sessionId uuid.UUID, opts *UpdateSessionOpts) (*sqlcv1.UserSession, error)
 	Delete(ctx context.Context, sessionId uuid.UUID) (*sqlcv1.UserSession, error)
 	GetById(ctx context.Context, sessionId uuid.UUID) (*sqlcv1.UserSession, error)
+
+	CleanupUserSessions(ctx context.Context) ([]uuid.UUID, error)
 }
 
 type userSessionRepository struct {
@@ -164,4 +166,8 @@ func (r *userSessionRepository) GetById(ctx context.Context, sessionId uuid.UUID
 		r.pool,
 		sessionId,
 	)
+}
+
+func (r *userSessionRepository) CleanupUserSessions(ctx context.Context) ([]uuid.UUID, error) {
+	return r.queries.CleanupUserSessions(ctx, r.pool)
 }
